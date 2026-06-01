@@ -22,9 +22,9 @@ jobs:
         run: |
           mkdir -p INPUT OUTPUT SUCCESS FAILURE Log
 
-      - name: Add Sample Input File
+      - name: Copy Real Input File
         run: |
-          echo "TEST DATA" > INPUT/test.txt
+          cp Payment_Input_Test.xlsx INPUT/
 
       - name: Give Execute Permission
         run: chmod +x run.sh
