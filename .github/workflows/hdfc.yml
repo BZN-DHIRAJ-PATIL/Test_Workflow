@@ -1,0 +1,51 @@
+name: HDFC EPIL Workflow
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-converter:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Create Runtime Folders
+        run: |
+          mkdir -p INPUT OUTPUT SUCCESS FAILURE Log
+
+      - name: Add Sample Input File
+        run: |
+          echo "TEST DATA" > INPUT/test.txt
+
+      - name: Give Execute Permission
+        run: chmod +x run.sh
+
+      - name: Run Converter
+        run: |
+          sh run.sh
+
+      - name: Display Logs
+        run: |
+          echo "===== LOGS ====="
+          ls -R Log || true
+          cat Log/* || true
+
+      - name: Upload Output and Logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: HDFC-RESULT
+          path: |
+            OUTPUT/
+            SUCCESS/
+            FAILURE/
+            Log/
+            fileCounter.properties
