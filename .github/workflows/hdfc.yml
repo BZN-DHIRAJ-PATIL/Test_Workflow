@@ -45,8 +45,10 @@ jobs:
 
           mail.select("INBOX")
 
-          status, messages = mail.search(None, '(UNSEEN)')
-
+          status, messages = mail.search(
+            None,
+          '(UNSEEN SUBJECT "HDFC_BATCH_INPUT")'
+          )
           mail_ids = messages[0].split()
 
           print("MAIL IDS:", mail_ids)
