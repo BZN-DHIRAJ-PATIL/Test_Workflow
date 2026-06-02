@@ -1,3 +1,4 @@
+
 name: HDFC EPIL Workflow
 
 on:
@@ -8,7 +9,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout Repository
         uses: actions/checkout@v5
 
@@ -96,8 +96,7 @@ jobs:
           mail.logout()
 
           print("Mail process completed successfully")
-
-       EOF
+          EOF
 
       - name: Run Converter
         run: |
