@@ -41,7 +41,7 @@ jobs:
 
           mail.select("INBOX")
 
-          status, messages = mail.search(None, "ALL")
+          status, messages = mail.search(None, '(UNSEEN)')
 
           mail_ids = messages[0].split()
 
@@ -61,17 +61,26 @@ jobs:
 
                   filename = part.get_filename()
 
-                  filepath = os.path.join("INPUT", filename)
+                  if filename and (
+                      filename.endswith(".xlsx")
+                      or filename.endswith(".xls")
+                      or filename.endswith(".csv")
+                  ):
 
-                  with open(filepath, "wb") as f:
-                      f.write(part.get_payload(decode=True))
+                      filepath = os.path.join("INPUT", filename)
 
-                  print("Downloaded:", filename)
+                      with open(filepath, "wb") as f:
+                          f.write(part.get_payload(decode=True))
+
+                      print("Downloaded:", filename)
+                      print("Saved To:", filepath)
+
+          if not os.listdir("INPUT"):
+              raise Exception("No valid attachment found in mailbox")
 
           mail.logout()
 
-          EOF
-          
+          EOF          
       - name: Run Converter
         run: |
           sh run.sh
