@@ -80,7 +80,7 @@ jobs:
 
           mail.logout()
 
-          EOF          
+       EOF          
       - name: Run Converter
         run: |
           sh run.sh
