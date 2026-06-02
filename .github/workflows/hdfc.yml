@@ -1,4 +1,3 @@
-
 name: HDFC EPIL Workflow
 
 on:
@@ -9,22 +8,42 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
+      # ==========================================
+      # Checkout Repository
+      # ==========================================
       - name: Checkout Repository
         uses: actions/checkout@v5
 
+      # ==========================================
+      # Setup Java
+      # ==========================================
       - name: Setup Java
         uses: actions/setup-java@v5
         with:
           java-version: '21'
           distribution: 'temurin'
 
+      # ==========================================
+      # Create Runtime Folders
+      # ==========================================
       - name: Create Runtime Folders
         run: |
-          mkdir -p INPUT OUTPUT SUCCESS FAILURE Log
+          mkdir -p INPUT
+          mkdir -p OUTPUT
+          mkdir -p SUCCESS
+          mkdir -p FAILURE
+          mkdir -p Log
 
+      # ==========================================
+      # Give Execute Permission
+      # ==========================================
       - name: Give Execute Permission
         run: chmod +x run.sh
 
+      # ==========================================
+      # Download Mail Attachment
+      # ==========================================
       - name: Download Mail Attachment
         run: |
           python3 <<EOF
@@ -45,65 +64,87 @@ jobs:
 
           mail.select("INBOX")
 
+          # Search unread mails with specific subject
           status, messages = mail.search(
-            None,
-          '(UNSEEN SUBJECT "HDFC_BATCH_INPUT")'
+              None,
+              '(UNSEEN SUBJECT "HDFC_BATCH_INPUT")'
           )
+
           mail_ids = messages[0].split()
 
-          print("MAIL IDS:", mail_ids)
+          print("MATCHED MAIL IDS:", mail_ids)
 
           if not mail_ids:
-              raise Exception("No unread emails found")
-
-          latest_email_id = mail_ids[-1]
-
-          status, msg_data = mail.fetch(latest_email_id, "(RFC822)")
-
-          raw_email = msg_data[0][1]
-
-          msg = email.message_from_bytes(raw_email)
+              raise Exception(
+                  "No unread emails found with subject HDFC_BATCH_INPUT"
+              )
 
           os.makedirs("INPUT", exist_ok=True)
 
           attachment_found = False
 
-          for part in msg.walk():
+          # Check latest matching mails first
+          for email_id in reversed(mail_ids):
 
-              if part.get_content_disposition() == "attachment":
+              status, msg_data = mail.fetch(email_id, "(RFC822)")
 
-                  filename = part.get_filename()
+              raw_email = msg_data[0][1]
 
-                  print("ATTACHMENT FOUND:", filename)
+              msg = email.message_from_bytes(raw_email)
 
-                  if filename and (
-                      filename.endswith(".xlsx")
-                      or filename.endswith(".xls")
-                      or filename.endswith(".csv")
-                  ):
+              subject = msg.get("Subject")
 
-                      filepath = os.path.join("INPUT", filename)
+              print("PROCESSING SUBJECT:", subject)
 
-                      with open(filepath, "wb") as f:
-                          f.write(part.get_payload(decode=True))
+              for part in msg.walk():
 
-                      print("Downloaded:", filename)
-                      print("Saved To:", filepath)
+                  if part.get_content_disposition() == "attachment":
 
-                      attachment_found = True
+                      filename = part.get_filename()
+
+                      print("ATTACHMENT FOUND:", filename)
+
+                      if filename and (
+                          filename.endswith(".xlsx")
+                          or filename.endswith(".xls")
+                          or filename.endswith(".csv")
+                      ):
+
+                          filepath = os.path.join("INPUT", filename)
+
+                          with open(filepath, "wb") as f:
+                              f.write(part.get_payload(decode=True))
+
+                          print("Downloaded:", filename)
+                          print("Saved To:", filepath)
+
+                          attachment_found = True
+                          break
+
+              if attachment_found:
+                  break
 
           if not attachment_found:
-              raise Exception("No valid attachment found in mailbox")
+              raise Exception(
+                  "No valid Excel/CSV attachment found"
+              )
 
           mail.logout()
 
           print("Mail process completed successfully")
+
           EOF
 
+      # ==========================================
+      # Run Converter
+      # ==========================================
       - name: Run Converter
         run: |
           sh run.sh
 
+      # ==========================================
+      # Display Runtime Logs
+      # ==========================================
       - name: Display Logs
         run: |
           echo "===== CURRENT DIRECTORY ====="
@@ -127,8 +168,45 @@ jobs:
           echo "===== LOG CONTENT ====="
           cat Log/* || true
 
+      # ==========================================
+      # Send Output Mail
+      # ==========================================
+      - name: Send Output Mail
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+
+          username: ${{ secrets.MAIL_USER }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+
+          subject: HDFC EPIL Output Files
+
+          to: yourgmail@gmail.com
+
+          from: GitHub Workflow
+
+          body: |
+            HDFC EPIL batch processing completed successfully.
+
+            Please find attached:
+            - Output Files
+            - Success Files
+            - Failure Files
+            - Logs
+
+          attachments: |
+            OUTPUT/*
+            SUCCESS/*
+            FAILURE/*
+            Log/*
+
+      # ==========================================
+      # Upload GitHub Artifacts
+      # ==========================================
       - name: Upload Output and Logs
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: HDFC-RESULT
           path: |
@@ -137,4 +215,3 @@ jobs:
             FAILURE/
             Log/
             fileCounter.properties
-
