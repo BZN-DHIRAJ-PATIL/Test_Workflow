@@ -22,13 +22,56 @@ jobs:
         run: |
           mkdir -p INPUT OUTPUT SUCCESS FAILURE Log
 
-      - name: Copy Real Input File
-        run: |
-          cp Payment_Input_Test.xlsx INPUT/
-
       - name: Give Execute Permission
         run: chmod +x run.sh
 
+      - name: Download Mail Attachment
+        run: |
+          python3 <<EOF
+          import imaplib
+          import email
+          import os
+
+          EMAIL = "${{ secrets.MAIL_USER }}"
+          PASSWORD = "${{ secrets.MAIL_PASSWORD }}"
+
+          mail = imaplib.IMAP4_SSL("outlook.office365.com")
+
+          mail.login(EMAIL, PASSWORD)
+
+          mail.select("INBOX")
+
+          status, messages = mail.search(None, "ALL")
+
+          mail_ids = messages[0].split()
+
+          latest_email_id = mail_ids[-1]
+
+          status, msg_data = mail.fetch(latest_email_id, "(RFC822)")
+
+          raw_email = msg_data[0][1]
+
+          msg = email.message_from_bytes(raw_email)
+
+          os.makedirs("INPUT", exist_ok=True)
+
+          for part in msg.walk():
+
+              if part.get_content_disposition() == "attachment":
+
+                  filename = part.get_filename()
+
+                  filepath = os.path.join("INPUT", filename)
+
+                  with open(filepath, "wb") as f:
+                      f.write(part.get_payload(decode=True))
+
+                  print("Downloaded:", filename)
+
+          mail.logout()
+
+          EOF
+          
       - name: Run Converter
         run: |
           sh run.sh
