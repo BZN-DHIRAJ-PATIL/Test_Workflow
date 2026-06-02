@@ -10,10 +10,10 @@ jobs:
     steps:
 
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '21'
           distribution: 'temurin'
@@ -35,15 +35,24 @@ jobs:
           EMAIL = "${{ secrets.MAIL_USER }}"
           PASSWORD = "${{ secrets.MAIL_PASSWORD }}"
 
+          print("Connecting to Gmail...")
+
           mail = imaplib.IMAP4_SSL("imap.gmail.com")
 
           mail.login(EMAIL, PASSWORD)
+
+          print("Login successful")
 
           mail.select("INBOX")
 
           status, messages = mail.search(None, '(UNSEEN)')
 
           mail_ids = messages[0].split()
+
+          print("MAIL IDS:", mail_ids)
+
+          if not mail_ids:
+              raise Exception("No unread emails found")
 
           latest_email_id = mail_ids[-1]
 
@@ -55,11 +64,15 @@ jobs:
 
           os.makedirs("INPUT", exist_ok=True)
 
+          attachment_found = False
+
           for part in msg.walk():
 
               if part.get_content_disposition() == "attachment":
 
                   filename = part.get_filename()
+
+                  print("ATTACHMENT FOUND:", filename)
 
                   if filename and (
                       filename.endswith(".xlsx")
@@ -75,24 +88,46 @@ jobs:
                       print("Downloaded:", filename)
                       print("Saved To:", filepath)
 
-          if not os.listdir("INPUT"):
+                      attachment_found = True
+
+          if not attachment_found:
               raise Exception("No valid attachment found in mailbox")
 
           mail.logout()
 
-       EOF          
+          print("Mail process completed successfully")
+
+       EOF
+
       - name: Run Converter
         run: |
           sh run.sh
 
       - name: Display Logs
         run: |
-          echo "===== LOGS ====="
+          echo "===== CURRENT DIRECTORY ====="
+          pwd
+
+          echo "===== INPUT ====="
+          ls -R INPUT || true
+
+          echo "===== OUTPUT ====="
+          ls -R OUTPUT || true
+
+          echo "===== SUCCESS ====="
+          ls -R SUCCESS || true
+
+          echo "===== FAILURE ====="
+          ls -R FAILURE || true
+
+          echo "===== LOG ====="
           ls -R Log || true
+
+          echo "===== LOG CONTENT ====="
           cat Log/* || true
 
       - name: Upload Output and Logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: HDFC-RESULT
           path: |
@@ -101,3 +136,4 @@ jobs:
             FAILURE/
             Log/
             fileCounter.properties
+```
