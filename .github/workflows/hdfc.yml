@@ -191,16 +191,10 @@ jobs:
             HDFC EPIL batch processing completed successfully.
 
             Please find attached:
-            - Output Files
-            - Success Files
-            - Failure Files
-            - Logs
+            - Output File
 
           attachments: |
             OUTPUT/*
-            SUCCESS/*
-            FAILURE/*
-            Log/*
 
       # ==========================================
       # Upload GitHub Artifacts
