@@ -67,7 +67,7 @@ jobs:
           # Search unread mails with specific subject
           status, messages = mail.search(
               None,
-              '(UNSEEN SUBJECT "HDFC_BATCH_INPUT")'
+              '(UNSEEN SUBJECT "HDFC_INPUT")'
           )
 
           mail_ids = messages[0].split()
@@ -76,7 +76,7 @@ jobs:
 
           if not mail_ids:
               raise Exception(
-                  "No unread emails found with subject HDFC_BATCH_INPUT"
+                  "No unread emails found with subject HDFC_INPUT"
               )
 
           os.makedirs("INPUT", exist_ok=True)
@@ -181,9 +181,9 @@ jobs:
           username: ${{ secrets.MAIL_USER }}
           password: ${{ secrets.MAIL_PASSWORD }}
 
-          subject: HDFC EPIL Output Files
+          subject: HDFC OUTPUT
 
-          to: Dhiraj.p@byzan.com
+          to: testemail@byzan.com
           
           from: GitHub Workflow
 
