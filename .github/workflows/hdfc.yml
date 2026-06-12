@@ -76,7 +76,7 @@ jobs:
 
           if not mail_ids:
               raise Exception(
-                  "No unread emails found with subject HDFC_INPUT"
+                  "No unread emails found with subject HDFC INPUT"
               )
 
           os.makedirs("INPUT", exist_ok=True)
