@@ -1,3 +1,4 @@
+```yaml
 name: HDFC EPIL Workflow
 
 on:
@@ -25,9 +26,9 @@ jobs:
           distribution: 'temurin'
 
       # ==========================================
-      # Create Runtime Folders
+      # Prepare Runtime Folders
       # ==========================================
-      - name: Create Runtime Folders
+      - name: Prepare Runtime Folders
         run: |
           mkdir -p INPUT
           mkdir -p OUTPUT
@@ -35,105 +36,14 @@ jobs:
           mkdir -p FAILURE
           mkdir -p Log
 
+          echo "===== INPUT FILES ====="
+          ls -lah INPUT
+
       # ==========================================
       # Give Execute Permission
       # ==========================================
       - name: Give Execute Permission
         run: chmod +x run.sh
-
-      # ==========================================
-      # Download Mail Attachment
-      # ==========================================
-      - name: Download Mail Attachment
-        run: |
-          python3 <<EOF
-          import imaplib
-          import email
-          import os
-
-          EMAIL = "${{ secrets.MAIL_USER }}"
-          PASSWORD = "${{ secrets.MAIL_PASSWORD }}"
-
-          print("Connecting to Gmail...")
-
-          mail = imaplib.IMAP4_SSL("imap.gmail.com")
-
-          mail.login(EMAIL, PASSWORD)
-
-          print("Login successful")
-
-          mail.select("INBOX")
-
-          # Search unread mails with specific subject
-          status, messages = mail.search(
-              None,
-              '(UNSEEN SUBJECT "HDFC INPUT")'
-          )
-
-          mail_ids = messages[0].split()
-
-          print("MATCHED MAIL IDS:", mail_ids)
-
-          if not mail_ids:
-              raise Exception(
-                  "No unread emails found with subject HDFC INPUT"
-              )
-
-          os.makedirs("INPUT", exist_ok=True)
-
-          attachment_found = False
-
-          # Check latest matching mails first
-          for email_id in reversed(mail_ids):
-
-              status, msg_data = mail.fetch(email_id, "(RFC822)")
-
-              raw_email = msg_data[0][1]
-
-              msg = email.message_from_bytes(raw_email)
-
-              subject = msg.get("Subject")
-
-              print("PROCESSING SUBJECT:", subject)
-
-              for part in msg.walk():
-
-                  if part.get_content_disposition() == "attachment":
-
-                      filename = part.get_filename()
-
-                      print("ATTACHMENT FOUND:", filename)
-
-                      if filename and (
-                          filename.endswith(".xlsx")
-                          or filename.endswith(".xls")
-                          or filename.endswith(".csv")
-                      ):
-
-                          filepath = os.path.join("INPUT", filename)
-
-                          with open(filepath, "wb") as f:
-                              f.write(part.get_payload(decode=True))
-
-                          print("Downloaded:", filename)
-                          print("Saved To:", filepath)
-
-                          attachment_found = True
-                          break
-
-              if attachment_found:
-                  break
-
-          if not attachment_found:
-              raise Exception(
-                  "No valid Excel/CSV attachment found"
-              )
-
-          mail.logout()
-
-          print("Mail process completed successfully")
-
-          EOF
 
       # ==========================================
       # Run Converter
@@ -146,6 +56,7 @@ jobs:
       # Display Runtime Logs
       # ==========================================
       - name: Display Logs
+        if: always()
         run: |
           echo "===== CURRENT DIRECTORY ====="
           pwd
@@ -169,37 +80,10 @@ jobs:
           cat Log/* || true
 
       # ==========================================
-      # Send Output Mail
-      # ==========================================
-      - name: Send Output Mail
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          secure: true
-
-          username: ${{ secrets.MAIL_USER }}
-          password: ${{ secrets.MAIL_PASSWORD }}
-
-          subject: HDFC OUTPUT
-
-          to: testemail@byzan.com
-          
-          from: GitHub Workflow
-
-          body: |
-            HDFC EPIL batch processing completed successfully.
-
-            Please find attached:
-            - Output File
-
-          attachments: |
-            OUTPUT/*
-
-      # ==========================================
-      # Upload GitHub Artifacts
+      # Upload Output and Logs
       # ==========================================
       - name: Upload Output and Logs
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: HDFC-RESULT
@@ -209,3 +93,5 @@ jobs:
             FAILURE/
             Log/
             fileCounter.properties
+          if-no-files-found: warn
+```
