@@ -3,9 +3,8 @@ name: HDFC EPIL Workflow
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '*/30 * * * *'
 
+  
 jobs:
   run-converter:
     runs-on: ubuntu-latest
