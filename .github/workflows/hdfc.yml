@@ -3,6 +3,8 @@ name: HDFC EPIL Workflow
 
 on:
   workflow_dispatch:
+  repository_dispatch:
+    types: [power_automate_hdfc]
 
   
 jobs:
